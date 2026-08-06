@@ -196,17 +196,14 @@ function MediaMTXDashboard() {
       return
     }
 
-    if (!newPath.source) {
-      alert("Please enter a source URL")
-      return
-    }
-
     setIsSubmitting(true)
 
     try {
-      await api.addPath(newPath as PathConfig)
-      if (newPath.comment && newPath.comment.trim()) {
-        await api.saveComment(newPath.name, newPath.comment)
+      // Empty source means "publisher" (SRT/RTSP/RTMP clients push into this path).
+      const payload = { ...newPath, source: newPath.source.trim() || "publisher" }
+      await api.addPath(payload as PathConfig)
+      if (payload.comment && payload.comment.trim()) {
+        await api.saveComment(payload.name, payload.comment)
       }
       await fetchPaths()
 
@@ -657,15 +654,17 @@ function MediaMTXDashboard() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="source">Source URL *</Label>
+                          <Label htmlFor="source">Source</Label>
                           <Input
                             id="source"
-                            placeholder="rtsp://admin:password@192.168.50.50"
+                            placeholder="publisher"
                             value={newPath.source}
                             onChange={(e) => setNewPath({ ...newPath, source: e.target.value })}
                           />
                           <p className="text-xs text-muted-foreground">
-                            RTSP, RTMP, or HLS URL. Example: rtsp://admin:Admin1234@192.168.50.50
+                            Use <span className="font-mono">publisher</span> for SRT/RTSP/RTMP clients that push
+                            into this path, or an RTSP/RTMP/HLS URL to pull from. Example:{" "}
+                            <span className="font-mono">rtsp://admin:Admin1234@192.168.50.50</span>
                           </p>
                         </div>
 
