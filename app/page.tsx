@@ -96,7 +96,12 @@ function MediaMTXDashboard() {
   const fetchPaths = async () => {
     setIsLoadingPaths(true)
     try {
-      const [configs, live, comments] = await Promise.all([api.getPathConfigs(), api.getPaths(), api.getComments()])
+      const [configs, live, comments, meta] = await Promise.all([
+        api.getPathConfigs(),
+        api.getPaths(),
+        api.getComments(),
+        api.getPathMeta(),
+      ])
       const configPaths = configs.filter((p) => p.name !== "all_others")
       const configNames = new Set(configPaths.map((p) => p.name))
       const dynamicPaths: PathConfig[] = live
@@ -110,8 +115,9 @@ function MediaMTXDashboard() {
       const merged = [...configPaths, ...dynamicPaths].map((p) => ({
         ...p,
         comment: comments[p.name] || "",
+        createdAt: meta[p.name] || "",
       }))
-      setPaths(merged)
+      setPaths(sortPaths(merged, live))
       setLivePaths(live)
     } catch (error) {
       console.error("Error fetching paths:", error)
@@ -119,6 +125,29 @@ function MediaMTXDashboard() {
     } finally {
       setIsLoadingPaths(false)
     }
+  }
+
+  // Active paths first, in the order they went active (oldest on top), then
+  // inactive paths by creation time (oldest first), falling back to
+  // alphabetical order when no creation time is known.
+  const sortPaths = (paths: PathConfig[], live: api.Path[]): PathConfig[] => {
+    const liveByName = new Map(live.map((p) => [p.name, p]))
+    return [...paths].sort((a, b) => {
+      const aLive = liveByName.get(a.name)
+      const bLive = liveByName.get(b.name)
+      const aActive = !!(aLive?.ready || aLive?.online)
+      const bActive = !!(bLive?.ready || bLive?.online)
+      if (aActive !== bActive) return aActive ? -1 : 1
+      if (aActive) {
+        const at = aLive?.readyTime ? Date.parse(aLive.readyTime) : Infinity
+        const bt = bLive?.readyTime ? Date.parse(bLive.readyTime) : Infinity
+        return at - bt
+      }
+      const ac = a.createdAt ? Date.parse(a.createdAt) : NaN
+      const bc = b.createdAt ? Date.parse(b.createdAt) : NaN
+      if (!Number.isNaN(ac) && !Number.isNaN(bc) && ac !== bc) return ac - bc
+      return a.name.localeCompare(b.name)
+    })
   }
 
   useEffect(() => {
@@ -203,6 +232,7 @@ function MediaMTXDashboard() {
       // Empty source means "publisher" (SRT/RTSP/RTMP clients push into this path).
       const payload = { ...newPath, source: newPath.source.trim() || "publisher" }
       await api.addPath(payload as PathConfig)
+      await api.rememberPathCreated(payload.name)
       if (payload.comment && payload.comment.trim()) {
         await api.saveComment(payload.name, payload.comment)
       }

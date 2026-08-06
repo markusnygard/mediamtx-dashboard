@@ -43,6 +43,7 @@ export interface PathConfig {
   name: string
   source: string
   comment?: string
+  createdAt?: string
   sourceFingerprint?: string
   sourceOnDemand?: boolean
   sourceOnDemandStartTimeout?: string
@@ -230,5 +231,21 @@ export async function saveComment(name: string, comment: string): Promise<void> 
 
 export async function deleteComment(name: string): Promise<void> {
   await fetch(`/api/comments/${encodeURIComponent(name)}`, { method: "DELETE" })
+}
+
+// Path metadata (creation times) stored by the dashboard.
+export interface PathMetaMap {
+  [name: string]: string
+}
+
+export async function getPathMeta(): Promise<PathMetaMap> {
+  const res = await fetch(`/api/paths/meta`, { cache: "no-store" })
+  if (!res.ok) return {}
+  const data = await res.json().catch(() => ({}))
+  return data.meta || {}
+}
+
+export async function rememberPathCreated(name: string): Promise<void> {
+  await fetch(`/api/paths/meta/${encodeURIComponent(name)}`, { method: "PUT" })
 }
 
