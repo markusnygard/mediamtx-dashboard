@@ -1385,7 +1385,7 @@ function MediaMTXDashboard() {
           <DialogContent className="max-w-6xl h-[85vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>Grafana</DialogTitle>
-              <DialogDescription>Log in with your Grafana credentials to view dashboards</DialogDescription>
+              <DialogDescription>MediaMTX metrics overview (read-only)</DialogDescription>
             </DialogHeader>
             <div className="flex-1 min-h-0">
               <iframe
