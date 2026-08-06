@@ -1392,7 +1392,7 @@ function MediaMTXDashboard() {
                 src={grafanaUrl}
                 title="Grafana"
                 className="w-full h-full border rounded-lg"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+                allow="fullscreen"
               />
             </div>
             <DialogFooter>
