@@ -49,8 +49,11 @@ function MediaMTXDashboard() {
   const router = useRouter()
   const username = getUsername()
 
-  // Grafana URL for the Monitoring tab popup (open Grafana's own login inside).
-  const grafanaUrl = process.env.NEXT_PUBLIC_GRAFANA_URL || ""
+  // Grafana URL for the Monitoring tab popup. Defaults to the same-origin
+  // proxy (/api/grafana) so it works even when port 3001 is firewalled.
+  const grafanaUrl =
+    process.env.NEXT_PUBLIC_GRAFANA_URL ||
+    (process.env.NEXT_PUBLIC_GRAFANA_PROXY ? "/api/grafana/d/mediamtx-overview/mediamtx?kiosk" : "")
 
   const [config, setConfig] = useState({
     logLevel: "info",
