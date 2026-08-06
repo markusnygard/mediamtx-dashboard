@@ -49,6 +49,9 @@ function MediaMTXDashboard() {
   const router = useRouter()
   const username = getUsername()
 
+  // Grafana URL for the Monitoring tab popup (open Grafana's own login inside).
+  const grafanaUrl = process.env.NEXT_PUBLIC_GRAFANA_URL || ""
+
   const [config, setConfig] = useState({
     logLevel: "info",
     rtsp: true,
@@ -76,6 +79,7 @@ function MediaMTXDashboard() {
 
   const [isAddPathDialogOpen, setIsAddPathDialogOpen] = useState(false)
   const [generatedUrls, setGeneratedUrls] = useState<api.GeneratedUrl[]>([])
+  const [isGrafanaOpen, setIsGrafanaOpen] = useState(false)
   const [newPath, setNewPath] = useState({
     name: "",
     source: "",
@@ -1151,6 +1155,22 @@ function MediaMTXDashboard() {
           </TabsContent>
 
           <TabsContent value="monitoring" className="space-y-6">
+            {grafanaUrl && (
+              <Card>
+                <CardContent className="flex items-center justify-between p-4">
+                  <div>
+                    <h3 className="font-medium">Grafana Dashboards</h3>
+                    <p className="text-sm text-muted-foreground">
+                      View MediaMTX metrics, CPU, memory and network graphs
+                    </p>
+                  </div>
+                  <Button onClick={() => setIsGrafanaOpen(true)}>
+                    <Activity className="w-4 h-4 mr-2" />
+                    Grafana
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -1359,6 +1379,30 @@ function MediaMTXDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {grafanaUrl && (
+        <Dialog open={isGrafanaOpen} onOpenChange={setIsGrafanaOpen}>
+          <DialogContent className="max-w-6xl h-[85vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Grafana</DialogTitle>
+              <DialogDescription>Log in with your Grafana credentials to view dashboards</DialogDescription>
+            </DialogHeader>
+            <div className="flex-1 min-h-0">
+              <iframe
+                src={grafanaUrl}
+                title="Grafana"
+                className="w-full h-full border rounded-lg"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsGrafanaOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
