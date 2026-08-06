@@ -1,6 +1,44 @@
 import { getAuthHeader } from "./auth"
 import { buildMediaMtxApiUrl } from "./mediamtx-url.mjs"
 
+// Public host used to build SRT/RTMP/RTSP connection URLs in the Add Path dialog.
+const MEDIAMTX_HOST = process.env.NEXT_PUBLIC_MEDIAMTX_HOST || ""
+
+export interface GeneratedUrl {
+  label: string
+  url: string
+}
+
+// buildConnectionUrls builds the publish and read URLs for a path based on the
+// protocol in the source box ("srt", "rtmp", "rtsp"). Returns empty if the
+// host or protocol is unknown.
+export function buildConnectionUrls(pathName: string, source: string): GeneratedUrl[] {
+  if (!MEDIAMTX_HOST) return []
+  const name = pathName.trim()
+  if (!name) return []
+  const proto = source.trim().toLowerCase()
+
+  switch (proto) {
+    case "srt":
+      return [
+        { label: "SRT publish", url: `srt://${MEDIAMTX_HOST}:8890?mode=caller&streamid=publish:${name}` },
+        { label: "SRT read", url: `srt://${MEDIAMTX_HOST}:8890?mode=caller&streamid=read:${name}` },
+      ]
+    case "rtmp":
+      return [
+        { label: "RTMP publish", url: `rtmp://${MEDIAMTX_HOST}:1935/${name}` },
+        { label: "RTMP read", url: `rtmp://${MEDIAMTX_HOST}:1935/${name}` },
+      ]
+    case "rtsp":
+      return [
+        { label: "RTSP publish", url: `rtsp://${MEDIAMTX_HOST}:8554/${name}` },
+        { label: "RTSP read", url: `rtsp://${MEDIAMTX_HOST}:8554/${name}` },
+      ]
+    default:
+      return []
+  }
+}
+
 export interface PathConfig {
   name: string
   source: string

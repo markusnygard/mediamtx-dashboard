@@ -75,6 +75,7 @@ function MediaMTXDashboard() {
   const [pathToDelete, setPathToDelete] = useState<string | null>(null)
 
   const [isAddPathDialogOpen, setIsAddPathDialogOpen] = useState(false)
+  const [generatedUrls, setGeneratedUrls] = useState<api.GeneratedUrl[]>([])
   const [newPath, setNewPath] = useState({
     name: "",
     source: "",
@@ -223,6 +224,7 @@ function MediaMTXDashboard() {
         maxReaders: 0,
         overridePublisher: true,
       })
+      setGeneratedUrls([])
       setIsAddPathDialogOpen(false)
       alert("Path added successfully!")
     } catch (error) {
@@ -655,17 +657,51 @@ function MediaMTXDashboard() {
 
                         <div className="space-y-2">
                           <Label htmlFor="source">Source</Label>
-                          <Input
-                            id="source"
-                            placeholder="publisher"
-                            value={newPath.source}
-                            onChange={(e) => setNewPath({ ...newPath, source: e.target.value })}
-                          />
+                          <div className="flex gap-2">
+                            <Input
+                              id="source"
+                              placeholder="publisher"
+                              value={newPath.source}
+                              onChange={(e) => setNewPath({ ...newPath, source: e.target.value })}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() =>
+                                setGeneratedUrls(api.buildConnectionUrls(newPath.name, newPath.source))
+                              }
+                              disabled={!newPath.name}
+                            >
+                              Generate URL
+                            </Button>
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             Use <span className="font-mono">publisher</span> for SRT/RTSP/RTMP clients that push
                             into this path, or an RTSP/RTMP/HLS URL to pull from. Example:{" "}
                             <span className="font-mono">rtsp://admin:Admin1234@192.168.50.50</span>
                           </p>
+                          {generatedUrls.length > 0 && (
+                            <div className="space-y-1.5 mt-1">
+                              {generatedUrls.map((u) => (
+                                <div key={u.label} className="text-xs">
+                                  <span className="text-muted-foreground mr-1">{u.label}:</span>
+                                  <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-800 dark:text-gray-100 break-all">
+                                    {u.url}
+                                  </code>
+                                </div>
+                              ))}
+                              <p className="text-xs text-muted-foreground">
+                                Host configured via NEXT_PUBLIC_MEDIAMTX_HOST.
+                              </p>
+                            </div>
+                          )}
+                          {newPath.name && generatedUrls.length === 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              Enter <span className="font-mono">srt</span>,{" "}
+                              <span className="font-mono">rtmp</span> or{" "}
+                              <span className="font-mono">rtsp</span> in the source box, then click Generate URL.
+                            </p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
