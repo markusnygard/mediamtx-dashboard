@@ -95,7 +95,17 @@ function MediaMTXDashboard() {
     setIsLoadingPaths(true)
     try {
       const [configs, live] = await Promise.all([api.getPathConfigs(), api.getPaths()])
-      setPaths(configs.filter((p) => p.name !== "all_others"))
+      const configPaths = configs.filter((p) => p.name !== "all_others")
+      const configNames = new Set(configPaths.map((p) => p.name))
+      const dynamicPaths: PathConfig[] = live
+        .filter((p) => !configNames.has(p.name))
+        .map((p) => ({
+          name: p.name,
+          source: p.source?.type || "publisher",
+          sourceOnDemand: false,
+          record: false,
+        }))
+      setPaths([...configPaths, ...dynamicPaths])
       setLivePaths(live)
     } catch (error) {
       console.error("Error fetching paths:", error)

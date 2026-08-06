@@ -93,7 +93,12 @@ export async function addPath(config: PathConfig): Promise<void> {
   // Only send the fields that MediaMTX expects
   const payload: any = {
     name: config.name,
-    source: config.source,
+  }
+
+  // Only add source if it's set; an empty source means "publisher" and
+  // MediaMTX rejects an explicit empty string with "invalid source".
+  if (config.source) {
+    payload.source = config.source
   }
 
   // Only add optional fields if they have non-default values
