@@ -43,6 +43,10 @@ async function proxyGrafanaRequest(request: Request, context: { params: Promise<
   for (const h of HOP_BY_HOP_HEADERS) {
     responseHeaders.delete(h)
   }
+  // Next.js fetch already decompresses the body; a stale content-encoding
+  // header would make the browser try to gunzip plain data.
+  responseHeaders.delete("content-encoding")
+  responseHeaders.delete("content-length")
   // Let the proxy set cookies for Grafana sessions.
   responseHeaders.delete("x-frame-options")
   responseHeaders.delete("content-security-policy")
