@@ -968,7 +968,7 @@ function MediaMTXDashboard() {
                       </div>
                       <div className="space-y-2">
                         <Label>Password</Label>
-                        <Input type="password" value="adminpass" readOnly />
+                        <Input type="password" placeholder="•••••••• (configured in mediamtx.yml)" readOnly />
                       </div>
                     </div>
                     <div className="mt-4">
