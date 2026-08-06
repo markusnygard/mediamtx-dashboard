@@ -4,6 +4,7 @@ import { buildMediaMtxApiUrl } from "./mediamtx-url.mjs"
 export interface PathConfig {
   name: string
   source: string
+  comment?: string
   sourceFingerprint?: string
   sourceOnDemand?: boolean
   sourceOnDemandStartTimeout?: string
@@ -167,5 +168,29 @@ export async function deletePath(name: string): Promise<void> {
   await fetchAPI(`/v3/config/paths/delete/${encodeURIComponent(name)}`, {
     method: "DELETE",
   })
+}
+
+// Comments are stored by the dashboard itself (MediaMTX has no comment field).
+export interface CommentMap {
+  [name: string]: string
+}
+
+export async function getComments(): Promise<CommentMap> {
+  const res = await fetch(`/api/comments`, { cache: "no-store" })
+  if (!res.ok) return {}
+  const data = await res.json().catch(() => ({}))
+  return data.comments || {}
+}
+
+export async function saveComment(name: string, comment: string): Promise<void> {
+  await fetch(`/api/comments/${encodeURIComponent(name)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ comment }),
+  })
+}
+
+export async function deleteComment(name: string): Promise<void> {
+  await fetch(`/api/comments/${encodeURIComponent(name)}`, { method: "DELETE" })
 }
 

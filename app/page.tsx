@@ -78,6 +78,7 @@ function MediaMTXDashboard() {
   const [newPath, setNewPath] = useState({
     name: "",
     source: "",
+    comment: "",
     sourceFingerprint: "",
     sourceOnDemand: true,
     record: false,
@@ -94,7 +95,7 @@ function MediaMTXDashboard() {
   const fetchPaths = async () => {
     setIsLoadingPaths(true)
     try {
-      const [configs, live] = await Promise.all([api.getPathConfigs(), api.getPaths()])
+      const [configs, live, comments] = await Promise.all([api.getPathConfigs(), api.getPaths(), api.getComments()])
       const configPaths = configs.filter((p) => p.name !== "all_others")
       const configNames = new Set(configPaths.map((p) => p.name))
       const dynamicPaths: PathConfig[] = live
@@ -105,7 +106,11 @@ function MediaMTXDashboard() {
           sourceOnDemand: false,
           record: false,
         }))
-      setPaths([...configPaths, ...dynamicPaths])
+      const merged = [...configPaths, ...dynamicPaths].map((p) => ({
+        ...p,
+        comment: comments[p.name] || "",
+      }))
+      setPaths(merged)
       setLivePaths(live)
     } catch (error) {
       console.error("Error fetching paths:", error)
@@ -132,6 +137,7 @@ function MediaMTXDashboard() {
     setIsSubmitting(true)
     try {
       await api.updatePath(editingPath.name, editingPath)
+      await api.saveComment(editingPath.name, editingPath.comment || "")
       await fetchPaths()
       setIsEditDialogOpen(false)
       setEditingPath(null)
@@ -150,6 +156,7 @@ function MediaMTXDashboard() {
     setIsSubmitting(true)
     try {
       await api.deletePath(pathToDelete)
+      await api.deleteComment(pathToDelete)
       await fetchPaths()
       setIsDeleteDialogOpen(false)
       setPathToDelete(null)
@@ -198,12 +205,16 @@ function MediaMTXDashboard() {
 
     try {
       await api.addPath(newPath as PathConfig)
+      if (newPath.comment && newPath.comment.trim()) {
+        await api.saveComment(newPath.name, newPath.comment)
+      }
       await fetchPaths()
 
       // Reset form and close dialog
       setNewPath({
         name: "",
         source: "",
+        comment: "",
         sourceFingerprint: "",
         sourceOnDemand: true,
         record: false,
@@ -377,6 +388,7 @@ function MediaMTXDashboard() {
                                   )}
                                 </div>
                                 <p className="text-sm text-gray-500">{path.source}</p>
+                                {path.comment && <p className="text-sm text-gray-600 mt-0.5">{path.comment}</p>}
                                 <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
                                   <span>{status.readers} viewers</span>
                                   {status.isLive && (
@@ -658,6 +670,19 @@ function MediaMTXDashboard() {
                         </div>
 
                         <div className="space-y-2">
+                          <Label htmlFor="pathComment">Comment / Contact (Optional)</Label>
+                          <Input
+                            id="pathComment"
+                            placeholder="e.g., Main camera - Matti (040 123 4567)"
+                            value={newPath.comment}
+                            onChange={(e) => setNewPath({ ...newPath, comment: e.target.value })}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Contact name / phone number shown next to this path
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
                           <Label htmlFor="sourceFingerprint">Source Fingerprint (Optional)</Label>
                           <Input
                             id="sourceFingerprint"
@@ -824,6 +849,7 @@ function MediaMTXDashboard() {
                                   )}
                                 </div>
                                 <p className="text-sm text-gray-500">{path.source}</p>
+                                {path.comment && <p className="text-sm text-gray-600 mt-0.5">{path.comment}</p>}
                                 <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
                                   <span>{status.readers} viewers</span>
                                   {status.isLive && (
@@ -1169,6 +1195,19 @@ function MediaMTXDashboard() {
                   value={editingPath.source}
                   onChange={(e) => setEditingPath({ ...editingPath, source: e.target.value })}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="editComment">Comment / Contact (Optional)</Label>
+                <Input
+                  id="editComment"
+                  placeholder="e.g., Main camera - Matti (040 123 4567)"
+                  value={editingPath.comment || ""}
+                  onChange={(e) => setEditingPath({ ...editingPath, comment: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Contact name / phone number shown next to this path
+                </p>
               </div>
 
               <div className="flex items-center space-x-2">
