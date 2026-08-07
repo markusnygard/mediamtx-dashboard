@@ -434,8 +434,12 @@ function MediaMTXDashboard() {
                         <div key={path.name} className="border rounded-lg overflow-hidden">
                           <div className="flex items-center justify-between p-4">
                             <div className="flex items-center space-x-4 flex-1">
-                              <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg">
-                                <VideoIcon className="w-5 h-5 text-blue-600" />
+                              <div
+                                className={`flex items-center justify-center w-10 h-10 rounded-lg ${
+                                  status.isLive ? "bg-red-100" : "bg-blue-100"
+                                }`}
+                              >
+                                <VideoIcon className={`w-5 h-5 ${status.isLive ? "text-red-600" : "text-blue-600"}`} />
                               </div>
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
@@ -931,8 +935,12 @@ function MediaMTXDashboard() {
                         <div key={path.name} className="border rounded-lg overflow-hidden">
                           <div className="flex items-center justify-between p-4">
                             <div className="flex items-center space-x-4 flex-1">
-                              <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg">
-                                <VideoIcon className="w-5 h-5 text-blue-600" />
+                              <div
+                                className={`flex items-center justify-center w-10 h-10 rounded-lg ${
+                                  status.isLive ? "bg-red-100" : "bg-blue-100"
+                                }`}
+                              >
+                                <VideoIcon className={`w-5 h-5 ${status.isLive ? "text-red-600" : "text-blue-600"}`} />
                               </div>
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
