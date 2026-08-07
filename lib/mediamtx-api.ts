@@ -35,11 +35,12 @@ export function buildPathUrls(pathName: string): GeneratedUrl[] {
   ]
 }
 
-// copyText copies a string to the clipboard, falling back to execCommand for
-// older browsers. Returns whether the copy succeeded.
+// copyText copies a string to the clipboard. Uses the async Clipboard API
+// when available (https/localhost); on plain http it falls back to a hidden
+// textarea + execCommand, selecting it explicitly so the right text is copied.
 export async function copyText(text: string): Promise<boolean> {
   try {
-    if (navigator.clipboard && window.isSecureContext) {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
       await navigator.clipboard.writeText(text)
       return true
     }
@@ -49,12 +50,22 @@ export async function copyText(text: string): Promise<boolean> {
   try {
     const textarea = document.createElement("textarea")
     textarea.value = text
+    textarea.setAttribute("readonly", "")
     textarea.style.position = "fixed"
-    textarea.style.opacity = "0"
+    textarea.style.top = "-9999px"
+    textarea.style.left = "-9999px"
     document.body.appendChild(textarea)
+    const selection = document.getSelection()
+    const selected = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null
+    textarea.focus()
     textarea.select()
+    textarea.setSelectionRange(0, textarea.value.length)
     const ok = document.execCommand("copy")
     document.body.removeChild(textarea)
+    if (selected && selection) {
+      selection.removeAllRanges()
+      selection.addRange(selected)
+    }
     return ok
   } catch {
     return false
