@@ -171,7 +171,18 @@ function MediaMTXDashboard() {
 
     setIsSubmitting(true)
     try {
-      await api.updatePath(editingPath.name, editingPath)
+      // Normalize source the same way as add (fixes paths that were created
+      // with a generated publish URL as source).
+      const raw = (editingPath.source || "").trim()
+      const lower = raw.toLowerCase()
+      const isUrl = /^[a-z]+:\/\//.test(lower)
+      const isSelfUrl = isUrl && lower.includes(editingPath.name.toLowerCase())
+      const source = isUrl && !isSelfUrl ? raw : "publisher"
+      await api.updatePath(editingPath.name, {
+        ...editingPath,
+        source,
+        sourceOnDemand: source === "publisher" ? false : editingPath.sourceOnDemand,
+      })
       await api.saveComment(editingPath.name, editingPath.comment || "")
       await fetchPaths()
       setIsEditDialogOpen(false)
@@ -244,7 +255,13 @@ function MediaMTXDashboard() {
       const isSelfUrl = isUrl && lower.includes(newPath.name.toLowerCase())
       const isKeyword = ["srt", "rtmp", "rtsp", "publisher"].includes(lower)
       const source = isUrl && !isSelfUrl ? raw : "publisher"
-      const payload = { ...newPath, source }
+      // sourceOnDemand only applies to pull (URL) sources; MediaMTX rejects
+      // it combined with a publisher source.
+      const payload = {
+        ...newPath,
+        source,
+        sourceOnDemand: source === "publisher" ? false : newPath.sourceOnDemand,
+      }
       await api.addPath(payload as PathConfig)
       await api.rememberPathCreated(payload.name)
       if (payload.comment && payload.comment.trim()) {
