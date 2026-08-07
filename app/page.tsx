@@ -234,8 +234,17 @@ function MediaMTXDashboard() {
     setIsSubmitting(true)
 
     try {
-      // Empty source means "publisher" (SRT/RTSP/RTMP clients push into this path).
-      const payload = { ...newPath, source: newPath.source.trim() || "publisher" }
+      // Normalize the source: an empty value, a protocol keyword
+      // (srt/rtmp/rtsp/publisher), or a URL that points back at this same
+      // path (e.g. a generated publish URL) all mean "publisher" — a push-in
+      // path. Only a URL to an EXTERNAL source is kept as a pull source.
+      const raw = newPath.source.trim()
+      const lower = raw.toLowerCase()
+      const isUrl = /^[a-z]+:\/\//.test(lower)
+      const isSelfUrl = isUrl && lower.includes(newPath.name.toLowerCase())
+      const isKeyword = ["srt", "rtmp", "rtsp", "publisher"].includes(lower)
+      const source = isUrl && !isSelfUrl ? raw : "publisher"
+      const payload = { ...newPath, source }
       await api.addPath(payload as PathConfig)
       await api.rememberPathCreated(payload.name)
       if (payload.comment && payload.comment.trim()) {
