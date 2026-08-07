@@ -1416,9 +1416,8 @@ function MediaMTXDashboard() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={async () => {
-                      const ok = await api.copyText(u.url)
-                      if (ok) {
+                    onClick={() => {
+                      if (api.copyText(u.url)) {
                         setCopiedUrl(u.url)
                         setTimeout(() => setCopiedUrl((c) => (c === u.url ? null : c)), 2000)
                       }
