@@ -35,30 +35,6 @@ export function buildPathUrls(pathName: string): GeneratedUrl[] {
   ]
 }
 
-// copyText copies a string to the clipboard. It runs synchronously inside the
-// click gesture so execCommand retains user activation (navigator.clipboard is
-// unavailable on plain http). Returns whether the copy succeeded.
-export function copyText(text: string): boolean {
-  try {
-    const textarea = document.createElement("textarea")
-    textarea.value = text
-    textarea.setAttribute("readonly", "")
-    textarea.style.position = "fixed"
-    textarea.style.top = "0"
-    textarea.style.left = "0"
-    textarea.style.opacity = "0"
-    document.body.appendChild(textarea)
-    textarea.focus()
-    textarea.select()
-    textarea.setSelectionRange(0, textarea.value.length)
-    const ok = document.execCommand("copy")
-    document.body.removeChild(textarea)
-    return ok
-  } catch {
-    return false
-  }
-}
-
 export interface PathConfig {
   name: string
   source: string

@@ -1405,25 +1405,38 @@ function MediaMTXDashboard() {
               }
               const sourceUrls = urls.filter((u) => u.group === "source")
               const destUrls = urls.filter((u) => u.group === "destination")
+              const copyUrl = (u: api.GeneratedUrl) => {
+                const el = document.getElementById(`url-${urlPath}-${u.label.replace(/[^a-zA-Z0-9]/g, "")}`) as
+                  | HTMLInputElement
+                  | null
+                if (!el) return
+                el.focus()
+                el.select()
+                el.setSelectionRange(0, el.value.length)
+                let ok = false
+                try {
+                  ok = document.execCommand("copy")
+                } catch {
+                  ok = false
+                }
+                if (ok) {
+                  setCopiedUrl(u.url)
+                  setTimeout(() => setCopiedUrl((c) => (c === u.url ? null : c)), 2000)
+                }
+              }
               const renderRow = (u: api.GeneratedUrl) => (
-                <div key={u.url} className="flex items-start gap-2">
+                <div key={u.url} className="flex items-center gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-muted-foreground">{u.label}</div>
-                    <code className="block bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs text-gray-800 dark:text-gray-100 break-all">
-                      {u.url}
-                    </code>
+                    <div className="text-xs font-medium text-muted-foreground mb-0.5">{u.label}</div>
+                    <input
+                      id={`url-${urlPath}-${u.label.replace(/[^a-zA-Z0-9]/g, "")}`}
+                      readOnly
+                      value={u.url}
+                      onFocus={(e) => e.currentTarget.select()}
+                      className="w-full bg-gray-100 dark:bg-gray-800 px-2 py-1.5 rounded text-xs text-gray-800 dark:text-gray-100 font-mono"
+                    />
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      if (api.copyText(u.url)) {
-                        setCopiedUrl(u.url)
-                        setTimeout(() => setCopiedUrl((c) => (c === u.url ? null : c)), 2000)
-                      }
-                    }}
-                    className="shrink-0"
-                  >
+                  <Button size="sm" variant="outline" onClick={() => copyUrl(u)} className="shrink-0">
                     {copiedUrl === u.url ? "Copied!" : "Copy"}
                   </Button>
                 </div>
