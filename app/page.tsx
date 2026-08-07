@@ -38,6 +38,7 @@ import {
   LogOut,
   Edit,
   VideoIcon,
+  Link as LinkIcon,
 } from "lucide-react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { clearAuth, getUsername } from "@/lib/auth"
@@ -79,7 +80,8 @@ function MediaMTXDashboard() {
   const [pathToDelete, setPathToDelete] = useState<string | null>(null)
 
   const [isAddPathDialogOpen, setIsAddPathDialogOpen] = useState(false)
-  const [generatedUrls, setGeneratedUrls] = useState<api.GeneratedUrl[]>([])
+  const [urlPath, setUrlPath] = useState<string | null>(null)
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
   const [isGrafanaOpen, setIsGrafanaOpen] = useState(false)
   const [newPath, setNewPath] = useState({
     name: "",
@@ -282,7 +284,6 @@ function MediaMTXDashboard() {
         maxReaders: 0,
         overridePublisher: true,
       })
-      setGeneratedUrls([])
       setIsAddPathDialogOpen(false)
       alert("Path added successfully!")
     } catch (error) {
@@ -462,6 +463,9 @@ function MediaMTXDashboard() {
                               </div>
                             </div>
                             <div className="flex items-center space-x-2">
+                              <Button size="sm" variant="outline" onClick={() => setUrlPath(path.name)}>
+                                <LinkIcon className="w-4 h-4" />
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -719,51 +723,17 @@ function MediaMTXDashboard() {
 
                         <div className="space-y-2">
                           <Label htmlFor="source">Source</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id="source"
-                              placeholder="publisher"
-                              value={newPath.source}
-                              onChange={(e) => setNewPath({ ...newPath, source: e.target.value })}
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() =>
-                                setGeneratedUrls(api.buildConnectionUrls(newPath.name, newPath.source))
-                              }
-                              disabled={!newPath.name}
-                            >
-                              Generate URL
-                            </Button>
-                          </div>
+                          <Input
+                            id="source"
+                            placeholder="publisher"
+                            value={newPath.source}
+                            onChange={(e) => setNewPath({ ...newPath, source: e.target.value })}
+                          />
                           <p className="text-xs text-muted-foreground">
                             Use <span className="font-mono">publisher</span> for SRT/RTSP/RTMP clients that push
                             into this path, or an RTSP/RTMP/HLS URL to pull from. Example:{" "}
                             <span className="font-mono">rtsp://admin:Admin1234@192.168.50.50</span>
                           </p>
-                          {generatedUrls.length > 0 && (
-                            <div className="space-y-1.5 mt-1">
-                              {generatedUrls.map((u) => (
-                                <div key={u.label} className="text-xs">
-                                  <span className="text-muted-foreground mr-1">{u.label}:</span>
-                                  <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-800 dark:text-gray-100 break-all">
-                                    {u.url}
-                                  </code>
-                                </div>
-                              ))}
-                              <p className="text-xs text-muted-foreground">
-                                Host configured via NEXT_PUBLIC_MEDIAMTX_HOST.
-                              </p>
-                            </div>
-                          )}
-                          {newPath.name && generatedUrls.length === 0 && (
-                            <p className="text-xs text-muted-foreground">
-                              Enter <span className="font-mono">srt</span>,{" "}
-                              <span className="font-mono">rtmp</span> or{" "}
-                              <span className="font-mono">rtsp</span> in the source box, then click Generate URL.
-                            </p>
-                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -963,6 +933,9 @@ function MediaMTXDashboard() {
                               </div>
                             </div>
                             <div className="flex items-center space-x-2">
+                              <Button size="sm" variant="outline" onClick={() => setUrlPath(path.name)}>
+                                <LinkIcon className="w-4 h-4" />
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -1407,6 +1380,72 @@ function MediaMTXDashboard() {
             </Button>
             <Button variant="destructive" onClick={handleDeletePath} disabled={isSubmitting}>
               {isSubmitting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={urlPath !== null} onOpenChange={(o) => { if (!o) setUrlPath(null) }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Connection URLs{urlPath ? `: ${urlPath}` : ""}</DialogTitle>
+            <DialogDescription>
+              Copy the right URL to send to the publisher or viewer. Click the copy button next to a URL.
+            </DialogDescription>
+          </DialogHeader>
+          {urlPath &&
+            (() => {
+              const urls = api.buildPathUrls(urlPath)
+              if (urls.length === 0) {
+                return (
+                  <p className="text-sm text-muted-foreground">
+                    No public host is configured (set NEXT_PUBLIC_MEDIAMTX_HOST).
+                  </p>
+                )
+              }
+              const sourceUrls = urls.filter((u) => u.group === "source")
+              const destUrls = urls.filter((u) => u.group === "destination")
+              const renderRow = (u: api.GeneratedUrl) => (
+                <div key={u.url} className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-muted-foreground">{u.label}</div>
+                    <code className="block bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs text-gray-800 dark:text-gray-100 break-all">
+                      {u.url}
+                    </code>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      const ok = await api.copyText(u.url)
+                      if (ok) {
+                        setCopiedUrl(u.url)
+                        setTimeout(() => setCopiedUrl((c) => (c === u.url ? null : c)), 2000)
+                      }
+                    }}
+                    className="shrink-0"
+                  >
+                    {copiedUrl === u.url ? "Copied!" : "Copy"}
+                  </Button>
+                </div>
+              )
+              return (
+                <div className="space-y-5 py-2">
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold">Source (publish)</h4>
+                    {sourceUrls.map(renderRow)}
+                  </div>
+                  <Separator />
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold">Destination (read)</h4>
+                    {destUrls.map(renderRow)}
+                  </div>
+                </div>
+              )
+            })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUrlPath(null)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

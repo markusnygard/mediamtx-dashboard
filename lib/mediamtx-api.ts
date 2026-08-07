@@ -1,41 +1,63 @@
 import { getAuthHeader } from "./auth"
 import { buildMediaMtxApiUrl } from "./mediamtx-url.mjs"
 
-// Public host used to build SRT/RTMP/RTSP connection URLs in the Add Path dialog.
+// Public host used to build connection URLs shown in the path URL popup.
 const MEDIAMTX_HOST = process.env.NEXT_PUBLIC_MEDIAMTX_HOST || ""
+const MEDIAMTX_SRT_PORT = process.env.NEXT_PUBLIC_MEDIAMTX_SRT_PORT || "8890"
+const MEDIAMTX_RTMP_PORT = process.env.NEXT_PUBLIC_MEDIAMTX_RTMP_PORT || "1935"
+const MEDIAMTX_RTSP_PORT = process.env.NEXT_PUBLIC_MEDIAMTX_RTSP_PORT || "8554"
+const MEDIAMTX_HLS_PORT = process.env.NEXT_PUBLIC_MEDIAMTX_HLS_PORT || "8888"
 
 export interface GeneratedUrl {
   label: string
   url: string
+  // Which group this URL belongs to in the popup: "source" (publish) or "destination" (read).
+  group: "source" | "destination"
 }
 
-// buildConnectionUrls builds the publish and read URLs for a path based on the
-// protocol in the source box ("srt", "rtmp", "rtsp"). Returns empty if the
-// host or protocol is unknown.
-export function buildConnectionUrls(pathName: string, source: string): GeneratedUrl[] {
+// buildPathUrls builds all shareable source/destination URLs for a path.
+// Returns an empty array if no public host is configured.
+export function buildPathUrls(pathName: string): GeneratedUrl[] {
   if (!MEDIAMTX_HOST) return []
   const name = pathName.trim()
   if (!name) return []
-  const proto = source.trim().toLowerCase()
+  const host = MEDIAMTX_HOST
 
-  switch (proto) {
-    case "srt":
-      return [
-        { label: "SRT publish", url: `srt://${MEDIAMTX_HOST}:8890?mode=caller&streamid=publish:${name}` },
-        { label: "SRT read", url: `srt://${MEDIAMTX_HOST}:8890?mode=caller&streamid=read:${name}` },
-      ]
-    case "rtmp":
-      return [
-        { label: "RTMP publish", url: `rtmp://${MEDIAMTX_HOST}:1935/${name}` },
-        { label: "RTMP read", url: `rtmp://${MEDIAMTX_HOST}:1935/${name}` },
-      ]
-    case "rtsp":
-      return [
-        { label: "RTSP publish", url: `rtsp://${MEDIAMTX_HOST}:8554/${name}` },
-        { label: "RTSP read", url: `rtsp://${MEDIAMTX_HOST}:8554/${name}` },
-      ]
-    default:
-      return []
+  return [
+    // Source (publish) URLs.
+    { label: "SRT source", url: `srt://${host}:${MEDIAMTX_SRT_PORT}?mode=caller&streamid=publish:${name}`, group: "source" },
+    { label: "RTMP source", url: `rtmp://${host}:${MEDIAMTX_RTMP_PORT}/${name}`, group: "source" },
+    { label: "RTSP source", url: `rtsp://${host}:${MEDIAMTX_RTSP_PORT}/${name}`, group: "source" },
+    // Destination (read) URLs.
+    { label: "SRT destination", url: `srt://${host}:${MEDIAMTX_SRT_PORT}?mode=caller&streamid=read:${name}`, group: "destination" },
+    { label: "RTSP destination", url: `rtsp://${host}:${MEDIAMTX_RTSP_PORT}/${name}`, group: "destination" },
+    { label: "HLS destination", url: `http://${host}:${MEDIAMTX_HLS_PORT}/${name}/index.m3u8`, group: "destination" },
+  ]
+}
+
+// copyText copies a string to the clipboard, falling back to execCommand for
+// older browsers. Returns whether the copy succeeded.
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text)
+      return true
+    }
+  } catch {
+    // fall through to execCommand
+  }
+  try {
+    const textarea = document.createElement("textarea")
+    textarea.value = text
+    textarea.style.position = "fixed"
+    textarea.style.opacity = "0"
+    document.body.appendChild(textarea)
+    textarea.select()
+    const ok = document.execCommand("copy")
+    document.body.removeChild(textarea)
+    return ok
+  } catch {
+    return false
   }
 }
 
