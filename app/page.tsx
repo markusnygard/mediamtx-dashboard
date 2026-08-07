@@ -133,8 +133,7 @@ function MediaMTXDashboard() {
   }
 
   // Active paths first, in the order they went active (oldest on top), then
-  // inactive paths by creation time (oldest first), falling back to
-  // alphabetical order when no creation time is known.
+  // inactive paths alphabetically.
   const sortPaths = (paths: PathConfig[], live: api.Path[]): PathConfig[] => {
     const liveByName = new Map(live.map((p) => [p.name, p]))
     return [...paths].sort((a, b) => {
@@ -148,10 +147,8 @@ function MediaMTXDashboard() {
         const bt = bLive?.readyTime ? Date.parse(bLive.readyTime) : Infinity
         return at - bt
       }
-      const ac = a.createdAt ? Date.parse(a.createdAt) : NaN
-      const bc = b.createdAt ? Date.parse(b.createdAt) : NaN
-      if (!Number.isNaN(ac) && !Number.isNaN(bc) && ac !== bc) return ac - bc
-      return a.name.localeCompare(b.name)
+      // Plain string comparison for deterministic ASCII alphabetical order.
+      return a.name < b.name ? -1 : a.name > b.name ? 1 : 0
     })
   }
 
