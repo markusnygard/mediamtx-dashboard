@@ -231,8 +231,14 @@ export interface CommentMap {
   [name: string]: string
 }
 
+// The dashboard-only routes check the same login as the MediaMTX API.
+function dashboardAuthHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const auth = getAuthHeader()
+  return auth ? { ...extra, Authorization: auth } : extra
+}
+
 export async function getComments(): Promise<CommentMap> {
-  const res = await fetch(`/api/comments`, { cache: "no-store" })
+  const res = await fetch(`/api/comments`, { cache: "no-store", headers: dashboardAuthHeaders() })
   if (!res.ok) return {}
   const data = await res.json().catch(() => ({}))
   return data.comments || {}
@@ -241,13 +247,13 @@ export async function getComments(): Promise<CommentMap> {
 export async function saveComment(name: string, comment: string): Promise<void> {
   await fetch(`/api/comments/${encodeURIComponent(name)}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: dashboardAuthHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ comment }),
   })
 }
 
 export async function deleteComment(name: string): Promise<void> {
-  await fetch(`/api/comments/${encodeURIComponent(name)}`, { method: "DELETE" })
+  await fetch(`/api/comments/${encodeURIComponent(name)}`, { method: "DELETE", headers: dashboardAuthHeaders() })
 }
 
 // Path metadata (creation times) stored by the dashboard.
@@ -256,13 +262,13 @@ export interface PathMetaMap {
 }
 
 export async function getPathMeta(): Promise<PathMetaMap> {
-  const res = await fetch(`/api/paths/meta`, { cache: "no-store" })
+  const res = await fetch(`/api/paths/meta`, { cache: "no-store", headers: dashboardAuthHeaders() })
   if (!res.ok) return {}
   const data = await res.json().catch(() => ({}))
   return data.meta || {}
 }
 
 export async function rememberPathCreated(name: string): Promise<void> {
-  await fetch(`/api/paths/meta/${encodeURIComponent(name)}`, { method: "PUT" })
+  await fetch(`/api/paths/meta/${encodeURIComponent(name)}`, { method: "PUT", headers: dashboardAuthHeaders() })
 }
 
