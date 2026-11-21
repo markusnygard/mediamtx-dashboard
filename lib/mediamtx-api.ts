@@ -7,6 +7,10 @@ const MEDIAMTX_SRT_PORT = process.env.NEXT_PUBLIC_MEDIAMTX_SRT_PORT || "8890"
 const MEDIAMTX_RTMP_PORT = process.env.NEXT_PUBLIC_MEDIAMTX_RTMP_PORT || "1935"
 const MEDIAMTX_RTSP_PORT = process.env.NEXT_PUBLIC_MEDIAMTX_RTSP_PORT || "8554"
 const MEDIAMTX_HLS_PORT = process.env.NEXT_PUBLIC_MEDIAMTX_HLS_PORT || "8888"
+// Media-over-QUIC: browser page + WebTransport on moqHTTP2/HTTP3 port (TCP+UDP),
+// native MoQ-over-QUIC clients on moqQUICAddress (UDP).
+const MEDIAMTX_MOQ_PORT = process.env.NEXT_PUBLIC_MEDIAMTX_MOQ_PORT || "8892"
+const MEDIAMTX_MOQ_QUIC_PORT = process.env.NEXT_PUBLIC_MEDIAMTX_MOQ_QUIC_PORT || "8893"
 
 export interface GeneratedUrl {
   label: string
@@ -28,10 +32,14 @@ export function buildPathUrls(pathName: string): GeneratedUrl[] {
     { label: "SRT source", url: `srt://${host}:${MEDIAMTX_SRT_PORT}?mode=caller&streamid=publish:${name}`, group: "source" },
     { label: "RTMP source", url: `rtmp://${host}:${MEDIAMTX_RTMP_PORT}/${name}`, group: "source" },
     { label: "RTSP source", url: `rtsp://${host}:${MEDIAMTX_RTSP_PORT}/${name}`, group: "source" },
+    { label: "MoQ source (browser, Chrome)", url: `https://${host}:${MEDIAMTX_MOQ_PORT}/${name}/publish`, group: "source" },
+    { label: "MoQ source (native QUIC)", url: `moqt://${host}:${MEDIAMTX_MOQ_QUIC_PORT}/${name}`, group: "source" },
     // Destination (read) URLs.
     { label: "SRT destination", url: `srt://${host}:${MEDIAMTX_SRT_PORT}?mode=caller&streamid=read:${name}`, group: "destination" },
     { label: "RTSP destination", url: `rtsp://${host}:${MEDIAMTX_RTSP_PORT}/${name}`, group: "destination" },
     { label: "HLS destination", url: `http://${host}:${MEDIAMTX_HLS_PORT}/${name}/index.m3u8`, group: "destination" },
+    { label: "MoQ destination (browser)", url: `https://${host}:${MEDIAMTX_MOQ_PORT}/${name}`, group: "destination" },
+    { label: "MoQ destination (native QUIC)", url: `moqt://${host}:${MEDIAMTX_MOQ_QUIC_PORT}/${name}`, group: "destination" },
   ]
 }
 
