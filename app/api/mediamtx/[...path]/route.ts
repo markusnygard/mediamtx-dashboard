@@ -1,3 +1,5 @@
+import { storeDeletePath, storePatchPath, storeSetPath } from "@/lib/server/path-store"
+
 const DEFAULT_UPSTREAM_API_URL = "http://localhost:9997"
 
 const HOP_BY_HOP_HEADERS = new Set([
@@ -46,6 +48,33 @@ function responseHeaders(headers: Headers) {
   return responseHeaders
 }
 
+// Matches v3/config/paths/{add|patch|replace|delete}/{name...}
+function pathConfigChange(segments: string[]): { action: string; name: string } | null {
+  if (segments.length < 5) return null
+  const [v, config, paths, action] = segments
+  if (v !== "v3" || config !== "config" || paths !== "paths") return null
+  if (!["add", "patch", "replace", "delete"].includes(action)) return null
+  const name = segments.slice(4).join("/")
+  return name ? { action, name } : null
+}
+
+function recordPathChange(action: string, name: string, status: number, responseText: string, body?: ArrayBuffer) {
+  try {
+    const ok = status >= 200 && status < 300
+    if (action === "delete") {
+      // Also forget it if MediaMTX no longer had it, otherwise path-sync would re-add it.
+      if (ok || status === 404 || /not found/i.test(responseText)) storeDeletePath(name)
+      return
+    }
+    if (!ok) return
+    const conf = body && body.byteLength ? JSON.parse(new TextDecoder().decode(body)) : {}
+    if (action === "patch") storePatchPath(name, conf)
+    else storeSetPath(name, conf)
+  } catch (err) {
+    console.error(`[path-store] could not record ${action} of "${name}": ${(err as Error).message}`)
+  }
+}
+
 async function proxyMediaMtxRequest(request: Request, context: { params: Promise<{ path?: string[] }> }) {
   const { path = [] } = await context.params
   const upstreamUrl = new URL(path.map(encodeURIComponent).join("/"), `${normalizeUpstreamApiUrl()}/`)
@@ -53,12 +82,25 @@ async function proxyMediaMtxRequest(request: Request, context: { params: Promise
   upstreamUrl.search = incomingUrl.search
 
   const method = request.method.toUpperCase()
+  const body = method === "GET" || method === "HEAD" ? undefined : await request.arrayBuffer()
   const response = await fetch(upstreamUrl, {
     method,
     headers: proxyHeaders(request),
-    body: method === "GET" || method === "HEAD" ? undefined : await request.arrayBuffer(),
+    body,
     cache: "no-store",
   })
+
+  // Path config changes: record them so they survive a MediaMTX restart.
+  const change = pathConfigChange(path)
+  if (change) {
+    const text = await response.text()
+    recordPathChange(change.action, change.name, response.status, text, body)
+    return new Response(text, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders(response.headers),
+    })
+  }
 
   return new Response(response.body, {
     status: response.status,
