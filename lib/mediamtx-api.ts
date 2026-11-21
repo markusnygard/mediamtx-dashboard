@@ -11,6 +11,13 @@ const MEDIAMTX_HLS_PORT = process.env.NEXT_PUBLIC_MEDIAMTX_HLS_PORT || "8888"
 // native MoQ-over-QUIC clients on moqQUICAddress (UDP).
 const MEDIAMTX_MOQ_PORT = process.env.NEXT_PUBLIC_MEDIAMTX_MOQ_PORT || "8892"
 const MEDIAMTX_MOQ_QUIC_PORT = process.env.NEXT_PUBLIC_MEDIAMTX_MOQ_QUIC_PORT || "8893"
+// Optional public base URLs when HLS / WebRTC sit behind a TLS reverse proxy,
+// e.g. https://hls.example.com and https://webrtc.example.com. When set they
+// replace the plain http://host:port links.
+const MEDIAMTX_HLS_PUBLIC_URL = (process.env.NEXT_PUBLIC_MEDIAMTX_HLS_PUBLIC_URL || "").replace(/\/+$/, "")
+const MEDIAMTX_WEBRTC_PUBLIC_URL = (process.env.NEXT_PUBLIC_MEDIAMTX_WEBRTC_PUBLIC_URL || "").replace(/\/+$/, "")
+// Set NEXT_PUBLIC_MEDIAMTX_RTSP_PORT=off to hide RTSP links when RTSP is not exposed.
+const RTSP_ENABLED = MEDIAMTX_RTSP_PORT !== "off"
 
 export interface GeneratedUrl {
   label: string
@@ -26,21 +33,27 @@ export function buildPathUrls(pathName: string): GeneratedUrl[] {
   const name = pathName.trim()
   if (!name) return []
   const host = MEDIAMTX_HOST
+  const hlsBase = MEDIAMTX_HLS_PUBLIC_URL || `http://${host}:${MEDIAMTX_HLS_PORT}`
 
-  return [
+  const urls: (GeneratedUrl | false)[] = [
     // Source (publish) URLs.
     { label: "SRT source", url: `srt://${host}:${MEDIAMTX_SRT_PORT}?mode=caller&streamid=publish:${name}`, group: "source" },
     { label: "RTMP source", url: `rtmp://${host}:${MEDIAMTX_RTMP_PORT}/${name}`, group: "source" },
-    { label: "RTSP source", url: `rtsp://${host}:${MEDIAMTX_RTSP_PORT}/${name}`, group: "source" },
+    RTSP_ENABLED && { label: "RTSP source", url: `rtsp://${host}:${MEDIAMTX_RTSP_PORT}/${name}`, group: "source" },
+    !!MEDIAMTX_WEBRTC_PUBLIC_URL && { label: "WebRTC source (browser)", url: `${MEDIAMTX_WEBRTC_PUBLIC_URL}/${name}/publish`, group: "source" },
+    !!MEDIAMTX_WEBRTC_PUBLIC_URL && { label: "WHIP source (OBS)", url: `${MEDIAMTX_WEBRTC_PUBLIC_URL}/${name}/whip`, group: "source" },
     { label: "MoQ source (browser, Chrome)", url: `https://${host}:${MEDIAMTX_MOQ_PORT}/${name}/publish`, group: "source" },
     { label: "MoQ source (native QUIC)", url: `moqt://${host}:${MEDIAMTX_MOQ_QUIC_PORT}/${name}`, group: "source" },
     // Destination (read) URLs.
     { label: "SRT destination", url: `srt://${host}:${MEDIAMTX_SRT_PORT}?mode=caller&streamid=read:${name}`, group: "destination" },
-    { label: "RTSP destination", url: `rtsp://${host}:${MEDIAMTX_RTSP_PORT}/${name}`, group: "destination" },
-    { label: "HLS destination", url: `http://${host}:${MEDIAMTX_HLS_PORT}/${name}/index.m3u8`, group: "destination" },
+    RTSP_ENABLED && { label: "RTSP destination", url: `rtsp://${host}:${MEDIAMTX_RTSP_PORT}/${name}`, group: "destination" },
+    { label: "HLS destination", url: `${hlsBase}/${name}/index.m3u8`, group: "destination" },
+    !!MEDIAMTX_WEBRTC_PUBLIC_URL && { label: "WebRTC destination (browser)", url: `${MEDIAMTX_WEBRTC_PUBLIC_URL}/${name}`, group: "destination" },
+    !!MEDIAMTX_WEBRTC_PUBLIC_URL && { label: "WHEP destination", url: `${MEDIAMTX_WEBRTC_PUBLIC_URL}/${name}/whep`, group: "destination" },
     { label: "MoQ destination (browser)", url: `https://${host}:${MEDIAMTX_MOQ_PORT}/${name}`, group: "destination" },
     { label: "MoQ destination (native QUIC)", url: `moqt://${host}:${MEDIAMTX_MOQ_QUIC_PORT}/${name}`, group: "destination" },
   ]
+  return urls.filter((u): u is GeneratedUrl => Boolean(u))
 }
 
 export interface PathConfig {
